@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Prédiction du diabète</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <main class="page">
+    <header class="hero">
+      <p class="eyebrow">Projet 3 · SVM linéaire</p>
+      <h1>Prédiction du diabète</h1>
+      <p class="subtitle">
+        Renseignez les 8 mesures du patient, puis lancez l'analyse.
+        Le modèle a été entraîné sur {{ metrics.rows }} patients
+        ({{ metrics.columns }} variables).
+      </p>
+      <div class="metrics">
+        <span>Précision entraînement <strong>{{ "%.1f"|format(metrics.train * 100) }} %</strong></span>
+        <span>Précision test <strong>{{ "%.1f"|format(metrics.test * 100) }} %</strong></span>
+        <span>Entraîné le <strong>{{ metrics.trained_at }}</strong></span>
+      </div>
+    </header>
+
+    {% if errors %}
+    <section class="alert" role="alert">
+      <strong>Vérifiez votre saisie :</strong>
+      <ul>
+        {% for error in errors %}<li>{{ error }}</li>{% endfor %}
+      </ul>
+    </section>
+    {% endif %}
+
+    {% if result %}
+    <section class="result {{ 'result--danger' if result.is_diabetic else 'result--safe' }}"
+             aria-live="polite">
+      <div class="result__main">
+        <span class="result__badge">
+          {{ 'Diabétique' if result.is_diabetic else 'Non diabétique' }}
+        </span>
+        <p class="result__text">
+          {% if result.is_diabetic %}
+            Le profil saisi est associé à un <strong>risque de diabète</strong>.
+          {% else %}
+            Le profil saisi n'est <strong>pas associé au diabète</strong>.
+          {% endif %}
+        </p>
+        <p class="result__meta">
+          Score de décision : <strong>{{ result.score }}</strong> ·
+          Indice indicatif : <strong>{{ result.confidence }} %</strong>
+        </p>
+      </div>
+      <details class="result__details">
+        <summary>Voir les données utilisées</summary>
+        <table>
+          <thead>
+            <tr><th>Variable</th><th>Saisie</th><th>Valeur standardisée</th></tr>
+          </thead>
+          <tbody>
+            {% for field in fields %}
+            <tr>
+              <td>{{ field.label }}</td>
+              <td>{{ result['values'][field.name]|num }}</td>
+              <td>{{ result.standardized[loop.index0] }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </details>
+    </section>
+    {% endif %}
+
+    <form class="card" method="post" action="{{ url_for('predict_route') }}" novalidate>
+      <div class="grid">
+        {% for field in fields %}
+        <div class="field">
+          <label for="{{ field.name }}">
+            {{ field.label }}
+            <span class="field__hint">{{ field.hint }}</span>
+          </label>
+          <input
+            type="number"
+            id="{{ field.name }}"
+            name="{{ field.name }}"
+            value="{{ values[field.name]|num }}"
+            min="{{ field.min }}"
+            max="{{ field.max }}"
+            step="{{ field.step }}"
+            inputmode="decimal"
+            required>
+        </div>
+        {% endfor %}
+      </div>
+
+      <div class="actions">
+        <button type="submit" class="btn btn--primary">Analyser</button>
+        <button type="reset" class="btn btn--ghost">Réinitialiser</button>
+      </div>
+    </form>
+
+    <footer class="note">
+      <p>
+        Outil de démonstration pédagogique : le résultat ne remplace en aucun cas
+        un diagnostic médical. L'« indice indicatif » provient de la marge du SVM
+        linéaire, sans calibration probabiliste.
+      </p>
+      <p class="api">
+        API JSON : <code>POST /api/predict</code> avec les 8 champs
+        (<code>Pregnancies</code>, <code>Glucose</code>, …).
+      </p>
+    </footer>
+  </main>
+</body>
+</html>
